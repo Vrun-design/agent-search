@@ -631,8 +631,10 @@
                 data.images.forEach(image => {
                     html += `
                         <div class="image-card">
+                            <a href="${escapeHtml(image.url)}" target="_blank" rel="noopener noreferrer">
                             <img src="${escapeHtml(image.url)}" alt="Search result image" loading="lazy" onerror="this.parent.style.display='none'">
                             ${image.description ? `<div class="image-description">${escapeHtml(image.description)}</div>` : ''}
+                            </a>
                         </div>
                     `;
                 });
