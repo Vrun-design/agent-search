@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Agent Search - AI Research Assistant</title>
+    <link rel="icon" href="assets/logo.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Figtree:wght@300;400;500;600;700&family=Archivo:wght@400;500;600;700&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+    <div class="dot-grid-background app-root">
+        <!-- Header -->
+        <header class="container header">
+            <a href="index.html" class="header__brand" aria-label="Brand">
+                <img src="assets/logo.svg" alt="Logo" class="brand__img" />
+            </a>
+            <!-- Mobile-only hamburger -->
+            <button class="header__menu-btn" id="mobileMenuBtn" aria-label="Open menu" aria-controls="mobileNav"
+                aria-expanded="false">
+                <svg class="header__menu-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M3 6h18M3 12h18M3 18h18" stroke="#1c2024" stroke-width="1.5" stroke-linecap="round" />
+                </svg>
+            </button>
+            <div class="header__actions">
+                <a href="https://github.com/Vrun-design/agent-search" target="_blank" rel="noopener noreferrer"
+                    aria-label="View on GitHub">
+                    <button class="btn btn-pill btn-primary" type="button">
+                        <span class="btn__icon" aria-hidden="true">
+                            <img src="assets/github-logo.svg" alt="" style="width: 20px; height: 20px;" />
+                        </span>
+                        <span class="btn__label">GitHub</span>
+                    </button>
+                </a>
+            </div>
+        </header>
+
+        <!-- Hero -->
+        <section class="container hero">
+            <div class="hero__line hero__line--one">
+                <h1 class="hero__text">
+                    <span class="hero__text-regular">
+                        <span style="color: var(--blue);">Research,</span> without the noise
+                    </span>
+                </h1>
+            </div>
+
+            <p class="hero__desc">Your AI agent that goes beyond surface answers. It searches, reads, and connects - so
+                you can focus on insight, not tabs.</p>
+
+            <!-- New: Hero Prompt Box + Suggestions -->
+            <div class="hero-prompt" aria-label="Ask Agent">
+                <div class="hero-prompt__card">
+                    <div class="hero-prompt__input">
+                        <input id="homePromptInput" class="hero-prompt__field"
+                            placeholder="Ask me to research anything…" />
+                        <button id="homePromptSend" class="hero-prompt__send" type="button" aria-label="Send">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"
+                                style="pointer-events: none;">
+                                <path d="M4 20L20 12L4 4V10L14 12L4 14V20Z" stroke="#FCFCFD" stroke-width="1.5" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="hero-prompt__chips" id="homePromptChips">
+                    <button class="chip" type="button">Search latest news on AI agents</button>
+                    <button class="chip" type="button">Find resources on design systems</button>
+                    <button class="chip" type="button">Show me updates about generative UI</button>
+                </div>
+
+                <!-- Progressive disclosure toggle -->
+                <button class="advanced-toggle" id="advancedToggle" type="button" aria-expanded="false"
+                    aria-controls="advancedSettings">
+                    <span class="advanced-toggle__label">Advanced Options</span>
+                    <svg class="advanced-toggle__icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                    </svg>
+                </button>
+
+                <!-- Integrated advanced settings -->
+                <div class="home-advanced" id="advancedSettings" aria-label="Advanced search options"
+                    aria-hidden="true">
+                    <div class="home-advanced__row">
+                        <!-- Hidden: Depth selector (always use 'advanced') -->
+                        <div class="form-group" style="display: none;">
+                            <label for="homeSearchDepth">Depth</label>
+                            <select id="homeSearchDepth">
+                                <option value="basic">Basic</option>
+                                <option value="advanced" selected>Advanced</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="homeMaxResults">Max Results</label>
+                            <input id="homeMaxResults" type="number" min="1" max="20" value="4" />
+                        </div>
+                        <!-- Hidden: Content per result (keep default value) -->
+                        <div class="form-group" style="display: none;">
+                            <label for="homeContentPerResult">Content / Result</label>
+                            <input id="homeContentPerResult" type="number" min="1" max="3" value="2" />
+                        </div>
+                        <div class="form-group">
+                            <label for="homeTimeRange">Published After</label>
+                            <select id="homeTimeRange">
+                                <option value="">Any</option>
+                                <option value="day">Day</option>
+                                <option value="week">Week</option>
+                                <option value="month">Month</option>
+                                <option value="year">Year</option>
+                            </select>
+                        </div>
+                    </div>
+                    <!-- Hidden: Images and AI answer checkboxes (always enabled) -->
+                    <div class="home-advanced__row" style="display: none;">
+                        <div class="form-group">
+                            <label><input type="checkbox" id="homeIncludeImages" checked /> Include images</label>
+                        </div>
+                        <div class="form-group">
+                            <label><input type="checkbox" id="homeIncludeAnswer" checked /> Include AI answer</label>
+                        </div>
+                    </div>
+                    <div class="home-advanced__row">
+                        <div class="form-group">
+                            <label for="homeSourceInput">Include domains</label>
+                            <input id="homeSourceInput" type="text" placeholder="example.com and press Enter" />
+                            <div id="homeSourcesTags" class="tag-input" aria-label="Included domains"></div>
+                        </div>
+                        <div class="form-group">
+                            <label for="homeExcludeInput">Exclude domains</label>
+                            <input id="homeExcludeInput" type="text" placeholder="domain.com and press Enter" />
+                            <div id="homeExcludeTags" class="tag-input" aria-label="Excluded domains"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- How it works section -->
+        <section class="container hiw" aria-label="How it works">
+            <div class="hiw__inner">
+                <h2 class="hiw__title">How it works</h2>
+                <div class="hiw__grid">
+                    <div class="card" data-has-link="false">
+                        <div class="card__icon" aria-hidden="true">💬</div>
+                        <h3 class="card__title">Ask anything</h3>
+                        <p class="card__desc">Start with a question, topic, or task. Add sources or constraints to guide
+                            the
+                            search.</p>
+                    </div>
+                    <div class="card" data-has-link="false">
+                        <div class="card__icon" aria-hidden="true">🔎</div>
+                        <h3 class="card__title">Deep search</h3>
+                        <p class="card__desc">Powered by Tavily, it explores the web with depth, relevance, and clear
+                            citations.</p>
+                    </div>
+                    <!-- <div class="card" data-has-link="false">
+                        <div class="card__icon" aria-hidden="true">📖</div>
+                        <h3 class="card__title">Context-aware reading</h3>
+                        <p class="card__desc">Understands and extracts from URLs, articles, and PDFs to assemble
+                            coherent
+                            answers.</p>
+                    </div> -->
+                    <div class="card" data-has-link="false">
+                        <div class="card__icon" aria-hidden="true">🗺️</div>
+                        <h3 class="card__title">Visual knowledge map</h3>
+                        <p class="card__desc">A visual map of concepts and connections — coming soon.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <script>
+            (function () {
+                const homeInput = document.getElementById('homePromptInput');
+                const homeSend = document.getElementById('homePromptSend');
+                const homeChips = document.getElementById('homePromptChips');
+                const depth = document.getElementById('homeSearchDepth');
+                const maxResults = document.getElementById('homeMaxResults');
+                const contentPerResult = document.getElementById('homeContentPerResult');
+                const timeRange = document.getElementById('homeTimeRange');
+                const includeImages = document.getElementById('homeIncludeImages');
+                const includeAnswer = document.getElementById('homeIncludeAnswer');
+                const srcInput = document.getElementById('homeSourceInput');
+                const srcTags = document.getElementById('homeSourcesTags');
+                const excInput = document.getElementById('homeExcludeInput');
+                const excTags = document.getElementById('homeExcludeTags');
+
+                let includeDomains = [];
+                let excludeDomains = [];
+
+                function addTag(container, value, list) {
+                    if (!value || list.includes(value)) return;
+                    list.push(value);
+                    const tag = document.createElement('div');
+                    tag.className = 'tag';
+                    tag.innerHTML = `<span>${value}</span><button class='remove' aria-label='Remove'>×</button>`;
+                    container.appendChild(tag);
+                }
+
+                function removeTag(container, list, value) {
+                    const idx = list.indexOf(value);
+                    if (idx >= 0) list.splice(idx, 1);
+                    const tags = Array.from(container.querySelectorAll('.tag'));
+                    const t = tags.find(el => el.querySelector('span')?.textContent === value);
+                    if (t) t.remove();
+                }
+
+                srcInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const v = srcInput.value.trim();
+                        if (!v) return;
+                        addTag(srcTags, v, includeDomains);
+                        srcInput.value = '';
+                    }
+                });
+                srcTags.addEventListener('click', (e) => {
+                    const btn = e.target.closest('.remove');
+                    if (!btn) return;
+                    const name = btn.parentElement.querySelector('span').textContent;
+                    removeTag(srcTags, includeDomains, name);
+                });
+
+                excInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const v = excInput.value.trim();
+                        if (!v) return;
+                        addTag(excTags, v, excludeDomains);
+                        excInput.value = '';
+                    }
+                });
+                excTags.addEventListener('click', (e) => {
+                    const btn = e.target.closest('.remove');
+                    if (!btn) return;
+                    const name = btn.parentElement.querySelector('span').textContent;
+                    removeTag(excTags, excludeDomains, name);
+                });
+
+                function buildQuery(q) {
+                    console.log('[Home] Building query for:', q);
+                    const p = new URLSearchParams();
+                    p.set('q', q);
+                    p.set('depth', depth?.value || 'advanced');
+
+                    const mr = parseInt(maxResults?.value || '4', 10);
+                    if (!isNaN(mr)) p.set('max_results', String(mr));
+
+                    if (depth?.value === 'advanced') {
+                        const cpr = parseInt(contentPerResult?.value || '2', 10);
+                        if (!isNaN(cpr)) p.set('max_content_per_result', String(cpr));
+                    }
+
+                    if (timeRange?.value) p.set('time_range', timeRange.value);
+                    if (includeImages?.checked) p.set('include_images', 'true');
+                    if (includeAnswer && !includeAnswer.checked) p.set('include_answer', 'false');
+                    if (includeDomains.length) p.set('include_domains', includeDomains.join(','));
+                    if (excludeDomains.length) p.set('exclude_domains', excludeDomains.join(','));
+
+                    const queryString = p.toString();
+                    console.log('[Home] Query string:', queryString);
+                    return queryString;
+                }
+
+                function startSearch(text) {
+                    console.log('[Home] startSearch ENTRY');
+                    const v = (text ?? homeInput?.value ?? '').trim();
+                    console.log('[Home] startSearch called with:', text);
+                    console.log('[Home] Input value:', homeInput?.value);
+                    console.log('[Home] Trimmed value:', v);
+
+                    if (!v) {
+                        console.log('[Home] Empty query, focusing input');
+                        if (homeInput) homeInput.focus();
+                        return;
+                    }
+
+                    try {
+                        // navigate to chat with params
+                        console.log('[Home] About to build query...');
+                        const qs = buildQuery(v);
+                        console.log('[Home] Query built:', qs);
+                        const targetUrl = `chat.html?${qs}`;
+                        console.log('[Home] Target URL:', targetUrl);
+                        console.log('[Home] About to navigate...');
+                        window.location.href = targetUrl;
+                        console.log('[Home] Navigation initiated');
+                    } catch (err) {
+                        console.error('[Home] Error during navigation:', err);
+                        throw err;
+                    }
+                }
+
+                // Advanced toggle functionality
+                const advancedToggle = document.getElementById('advancedToggle');
+                const advancedSettings = document.getElementById('advancedSettings');
+
+                if (advancedToggle && advancedSettings) {
+                    advancedToggle.addEventListener('click', () => {
+                        const isOpen = advancedSettings.classList.toggle('open');
+                        advancedToggle.classList.toggle('open', isOpen);
+                        advancedToggle.setAttribute('aria-expanded', isOpen);
+                        advancedSettings.setAttribute('aria-hidden', !isOpen);
+                    });
+                }
+
+                // Event listeners
+                console.log('[Home] Setting up event listeners...');
+                console.log('[Home] homeSend:', homeSend);
+                console.log('[Home] homeInput:', homeInput);
+                console.log('[Home] homeChips:', homeChips);
+
+                if (homeSend) {
+                    console.log('[Home] Added click listener to send button');
+                    homeSend.addEventListener('click', (e) => {
+                        console.log('[Home] Send button clicked');
+                        e.preventDefault();
+                        e.stopPropagation();
+                        try {
+                            startSearch();
+                        } catch (err) {
+                            console.error('[Home] Error in startSearch:', err);
+                        }
+                        return false;
+                    });
+                }
+
+                if (homeInput) {
+                    console.log('[Home] Added keydown listener to input');
+                    homeInput.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') {
+                            console.log('[Home] Enter pressed in input');
+                            e.preventDefault();
+                            e.stopPropagation();
+                            try {
+                                startSearch();
+                            } catch (err) {
+                                console.error('[Home] Error in startSearch:', err);
+                            }
+                            return false;
+                        }
+                    });
+                }
+
+                // Chips should populate the input, not immediately search
+                if (homeChips) {
+                    console.log('[Home] Added click listener to chips');
+                    homeChips.addEventListener('click', (e) => {
+                        const btn = e.target.closest('button.chip');
+                        if (!btn) return;
+                        const text = btn.textContent || '';
+                        console.log('[Home] Chip clicked:', text);
+                        if (homeInput) {
+                            homeInput.value = text;
+                            homeInput.focus();
+                        }
+                    });
+                }
+
+                // Optional: basic health check to surface server/key issues
+                fetch('/api/health').then(r => r.json()).then(d => {
+                    if (!d || d.ok !== true) { console.warn('Health check failed'); }
+                    if (d && d.hasKey === false) { console.warn('Server missing Tavily key'); }
+                }).catch(() => console.warn('Health check unreachable'));
+            })();
+        </script>
+</body>
+
+</html>

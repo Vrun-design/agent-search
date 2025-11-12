@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Agent Search — Chat</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=Archivo:wght@400;500;600;700&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body class="dot-grid-background page">
+    <header class="container header">
+        <a href="index.html" class="header__brand" aria-label="Brand">
+            <img src="assets/logo.svg" alt="Logo" class="brand__img" onerror="this.style.display='none'" />
+        </a>
+        <div class="header__actions">
+            <a href="https://github.com/Vrun-design/agent-search" target="_blank" rel="noopener noreferrer"
+                aria-label="View on GitHub">
+                <button class="btn btn-pill btn-primary" type="button">
+                    <span class="btn__icon" aria-hidden="true">
+                        <img src="assets/github-logo.svg" alt="" style="width: 20px; height: 20px;" />
+                    </span>
+                    <span class="btn__label">GitHub</span>
+                </button>
+            </a>
+        </div>
+    </header>
+
+    <main id="stage" class="stage" role="log" aria-live="polite" aria-relevant="additions"></main>
+
+    <div class="composer-wrap">
+        <div id="suggestions" class="suggestions" aria-label="Suggestions"></div>
+        <div class="composer">
+            <input id="input" placeholder="Ask me to research something…" />
+            <div class="composer-actions">
+                <button id="toggleSources" class="icon-btn" title="Add sources" aria-label="Add sources">📎</button>
+                <button id="toggleAdvanced" class="icon-btn" title="Advanced options"
+                    aria-label="Advanced options">⚙️</button>
+            </div>
+            <button id="send" class="send" aria-label="Send">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M4 20L20 12L4 4V10L14 12L4 14V20Z" stroke="#FCFCFD" stroke-width="1.5" />
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Backdrop for panels -->
+    <div id="panelBackdrop" class="panel-backdrop" aria-hidden="true"></div>
+
+    <!-- Sources panel -->
+    <div id="sourcesPanel" class="panel" aria-hidden="true">
+        <div class="panel__title">Sources / Domains</div>
+        <div class="form-group">
+            <label for="sourceInput">Add domain and press Enter</label>
+            <input id="sourceInput" type="text" placeholder="example.com" />
+        </div>
+        <div id="sourcesTags" class="tag-input"></div>
+    </div>
+
+    <!-- Advanced panel -->
+    <div id="advancedPanel" class="panel" aria-hidden="true">
+        <div class="panel__title">Advanced Search</div>
+        <div class="panel__row">
+            <!-- Hidden: Depth selector (always use 'advanced') -->
+            <div class="form-group" style="display: none;">
+                <label for="searchDepth">Depth</label>
+                <select id="searchDepth">
+                    <option value="basic">Basic</option>
+                    <option value="advanced" selected>Advanced</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="maxResults">Max Results</label>
+                <input id="maxResults" type="number" min="1" max="20" value="4" />
+            </div>
+            <!-- Hidden: Content per result (keep default value) -->
+            <div class="form-group" style="display: none;">
+                <label for="contentPerResult">Content / Result</label>
+                <input id="contentPerResult" type="number" min="1" max="3" value="2" />
+            </div>
+            <div class="form-group">
+                <label for="timeRange">Published After</label>
+                <select id="timeRange">
+                    <option value="">Any</option>
+                    <option value="day">Day</option>
+                    <option value="week">Week</option>
+                    <option value="month">Month</option>
+                    <option value="year">Year</option>
+                </select>
+            </div>
+        </div>
+        <!-- Hidden: Images and AI answer checkboxes (always enabled) -->
+        <div class="form-group" style="display: none;">
+            <label><input type="checkbox" id="includeImages" checked /> Include images</label>
+        </div>
+        <div class="form-group" style="display: none;">
+            <label><input type="checkbox" id="includeAnswer" checked /> Include AI answer</label>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            const stage = document.getElementById('stage');
+            const input = document.getElementById('input');
+            const send = document.getElementById('send');
+            const suggestionsEl = document.getElementById('suggestions');
+            const sourcesPanel = document.getElementById('sourcesPanel');
+            const advancedPanel = document.getElementById('advancedPanel');
+            const toggleSources = document.getElementById('toggleSources');
+            const toggleAdvanced = document.getElementById('toggleAdvanced');
+            const sourceInput = document.getElementById('sourceInput');
+            const sourcesTags = document.getElementById('sourcesTags');
+            const searchDepth = document.getElementById('searchDepth');
+            const maxResults = document.getElementById('maxResults');
+            const contentPerResult = document.getElementById('contentPerResult');
+            const timeRange = document.getElementById('timeRange');
+            const includeImages = document.getElementById('includeImages');
+            const includeAnswer = document.getElementById('includeAnswer');
+            const backdrop = document.getElementById('panelBackdrop');
+
+            let sources = [];
+            let excludeDomains = [];
+            let typingTimeout = null;
+
+            function scrollBottom() { requestAnimationFrame(() => { window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' }); }); }
+
+            function addRow(role, text) {
+                const row = document.createElement('div'); row.className = 'msg ' + (role === 'user' ? 'msg--user' : 'msg--assistant');
+                const bubble = document.createElement('div'); bubble.className = 'bubble';
+                if (text === '__typing__') {
+                    bubble.classList.add('bubble--typing');
+                    bubble.innerHTML = '<div class="loading"><span class="bar"></span><span class="bar"></span><span class="bar short"></span></div>';
+                } else {
+                    bubble.innerHTML = (text || '').replace(/\n/g, '<br>');
+                }
+                row.appendChild(bubble); stage.appendChild(row); stage.classList.add('active'); scrollBottom(); return row;
+            }
+
+            function renderDefaultSuggestions() {
+                const arr = ['Search latest news on AI agents', 'Find resources on design systems', 'Show me updates about generative UI'];
+                suggestionsEl.innerHTML = arr.map(t => `<button class="chip" type="button">${t}</button>`).join('') + '<button id="resetChat" class="chip chip--ghost" type="button" aria-label="Reset">Reset</button>';
+            }
+
+            function renderImageFallback(img) {
+                // Swap to placeholder only once
+                if (img.dataset.fallback) return;
+                img.dataset.fallback = '1';
+                img.alt = 'Image not available';
+                img.src = 'assets/placeholder.svg';
+                img.style.objectFit = 'contain';
+                img.style.background = '#f2f3f5';
+                img.style.padding = '8px';
+            }
+
+            function buildSearchParams(query) {
+                const params = {
+                    query,
+                    topic: 'general',
+                    search_depth: searchDepth.value,
+                    max_results: parseInt(maxResults.value) || 4,
+                    include_answer: includeAnswer.checked,
+                    include_images: includeImages.checked
+                };
+                if (searchDepth.value === 'advanced') params.max_content_per_result = parseInt(contentPerResult.value) || 2;
+                if (timeRange.value) params.published_after = timeRange.value;
+                if (sources.length) params.include_domains = sources.slice();
+                if (excludeDomains.length) params.exclude_domains = excludeDomains.slice();
+
+                console.log('Search params:', params);
+                return params;
+            }
+
+            async function performSearch(params) {
+                const res = await fetch('/api/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(params) });
+                if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.detail || 'Search failed'); }
+                const data = await res.json();
+                console.log('Search response:', data);
+                return data;
+            }
+
+            function renderSearchResults(data) {
+                // Return just the content, not wrapped in bubble (bubble is added by caller)
+                let html = '';
+
+                if (data.answer) {
+                    html += `<div style="margin-bottom:16px;"><strong>Answer:</strong><br>${(data.answer || '').replace(/\n/g, '<br>')}</div>`;
+                }
+
+                if (data.results && data.results.length) {
+                    html += '<div style="display:flex;flex-direction:column;gap:16px;">';
+                    data.results.forEach(r => {
+                        // Extract domain from URL for chip display
+                        let domain = '';
+                        try {
+                            domain = new URL(r.url).hostname.replace('www.', '');
+                        } catch (e) {
+                            domain = r.url;
+                        }
+
+                        html += `<div style="border-left:3px solid #306bff;padding-left:12px;">
+                            <div style="font-weight:600;margin-bottom:4px;">
+                                <a href="${r.url}" target="_blank" rel="noopener" style="color:#306bff;text-decoration:none;">${r.title || 'Untitled'}</a>
+                            </div>
+                            <div style="font-size:14px;line-height:1.5;margin-bottom:6px;">${(r.content || '').slice(0, 500)}</div>
+                            <div style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border:1px solid #1c2024;border-radius:999px;background:#fff;box-shadow:0 2px 0 #000;font-size:11px;font-weight:500;">
+                                <span>🔗</span>
+                                <span>${domain}</span>
+                            </div>
+                        </div>`;
+                    });
+                    html += '</div>';
+                }
+
+                // Check if images exist and are valid
+                if (data.images && Array.isArray(data.images) && data.images.length > 0) {
+                    console.log('✅ Images found:', data.images.length);
+                    console.log('📷 Image URLs:', data.images);
+
+                    html += '<div style="margin-top:20px; border-top: 1px solid #e5e7eb; padding-top: 16px;">';
+                    html += '<div style="font-weight:600; margin-bottom:12px; font-size:14px;">📷 Images (' + data.images.length + ')</div>';
+                    html += '<div class="images-grid" style="display:grid !important; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)) !important; gap:12px !important;">';
+
+                    data.images.forEach((imgUrl, idx) => {
+                        // Handle both string URLs and objects with url property
+                        const url = typeof imgUrl === 'string' ? imgUrl : (imgUrl.url || imgUrl);
+                        if (url) {
+                            console.log(`✓ Rendering image ${idx + 1}:`, url);
+                            html += `<div class="image-card" style="display:block !important;">
+                                <a href="${url}" target="_blank" rel="noopener noreferrer">
+                                    <img src="${url}" alt="Search result image ${idx + 1}" style="width:100%; height:140px; object-fit:cover; display:block !important;" />
+                                </a>
+                            </div>`;
+                        }
+                    });
+
+                    html += '</div></div>';
+                    console.log('✅ Images HTML added to response');
+                } else {
+                    console.log('❌ No images in response');
+                    if (data.images) {
+                        console.log('Images value:', data.images);
+                        console.log('Is array?', Array.isArray(data.images));
+                        console.log('Length:', data.images.length);
+                    }
+                }
+
+                return html || 'No results found.';
+            }
+
+            async function handleSend(text) {
+                const v = (text ?? input.value ?? '').trim();
+                if (!v) {
+                    input.focus();
+                    return;
+                }
+
+                // Add user message
+                addRow('user', v);
+
+                // Clear input
+                input.value = '';
+
+                // Show typing indicator
+                const typing = addRow('assistant', '__typing__');
+
+                // Ensure typing appears at least 300ms to avoid flicker
+                const minTyping = new Promise(res => { typingTimeout = setTimeout(res, 300); });
+
+                try {
+                    const params = buildSearchParams(v);
+                    const data = await performSearch(params);
+
+                    await minTyping;
+                    if (typing.parentNode) typing.remove();
+
+                    // Render results
+                    const block = document.createElement('div');
+                    block.className = 'msg msg--assistant';
+                    const bubble = document.createElement('div');
+                    bubble.className = 'bubble';
+                    bubble.innerHTML = renderSearchResults(data);
+                    block.appendChild(bubble);
+                    stage.appendChild(block);
+                    scrollBottom();
+                } catch (err) {
+                    console.error('Search error:', err);
+                    await minTyping;
+                    if (typing.parentNode) typing.remove();
+                    addRow('assistant', 'Error: ' + err.message);
+                }
+                finally {
+                    if (typingTimeout) {
+                        clearTimeout(typingTimeout);
+                        typingTimeout = null;
+                    }
+                }
+            }
+
+            // Panel control
+            function openPanel(el) { if (!el) return; el.classList.add('open'); el.setAttribute('aria-hidden', 'false'); backdrop.classList.add('active'); backdrop.setAttribute('aria-hidden', 'false'); }
+            function closePanels() { [sourcesPanel, advancedPanel].forEach(p => { p.classList.remove('open'); p.setAttribute('aria-hidden', 'true'); }); backdrop.classList.remove('active'); backdrop.setAttribute('aria-hidden', 'true'); }
+            toggleSources.addEventListener('click', () => { const was = sourcesPanel.classList.contains('open'); closePanels(); if (!was) openPanel(sourcesPanel); });
+            toggleAdvanced.addEventListener('click', () => { const was = advancedPanel.classList.contains('open'); closePanels(); if (!was) openPanel(advancedPanel); });
+            backdrop.addEventListener('click', closePanels);
+
+            // Tags add/remove
+            sourceInput.addEventListener('keydown', e => {
+                if (e.key === 'Enter') {
+                    e.preventDefault(); const val = sourceInput.value.trim(); if (!val) return; if (!sources.includes(val)) { sources.push(val); const tag = document.createElement('div'); tag.className = 'tag'; tag.innerHTML = `<span>${val}</span><button class='remove' aria-label='Remove'>×</button>`; sourcesTags.appendChild(tag); sourceInput.value = ''; }
+                }
+            });
+            sourcesTags.addEventListener('click', e => { const btn = e.target.closest('.remove'); if (!btn) return; const parent = btn.parentElement; const name = parent.querySelector('span').textContent; sources = sources.filter(s => s !== name); parent.remove(); });
+
+            // Suggestions
+            suggestionsEl.addEventListener('click', e => {
+                const btn = e.target.closest('button');
+                if (!btn) return;
+                if (btn.id === 'resetChat') {
+                    stage.innerHTML = '';
+                    stage.classList.remove('active');
+                    renderDefaultSuggestions();
+                    return;
+                }
+                // Populate input instead of auto-sending
+                input.value = btn.textContent || '';
+                input.focus();
+            });
+            send.addEventListener('click', () => handleSend());
+            input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); handleSend(); } });
+
+            // Expose fallback handler
+            window.__imgFallback = renderImageFallback;
+
+            // Read URL params for initial state
+            (function initFromQuery() {
+                const p = new URLSearchParams(location.search);
+
+                const q = p.get('q') || '';
+                if (q) input.value = q;
+
+                const depth = p.get('depth');
+                if (depth) searchDepth.value = depth;
+
+                const mr = parseInt(p.get('max_results') || '', 10);
+                if (!isNaN(mr)) maxResults.value = mr;
+
+                const cpr = parseInt(p.get('max_content_per_result') || '', 10);
+                if (!isNaN(cpr)) contentPerResult.value = cpr;
+
+                const tr = p.get('time_range');
+                if (tr != null) timeRange.value = tr;
+
+                const imgs = p.get('include_images');
+                if (imgs != null) includeImages.checked = imgs === 'true' || imgs === '1';
+
+                const ans = p.get('include_answer');
+                if (ans != null) includeAnswer.checked = ans === 'true' || ans === '1';
+
+                const inc = p.get('include_domains');
+                if (inc) {
+                    inc.split(',').map(s => s.trim()).filter(Boolean).forEach(v => {
+                        if (!sources.includes(v)) {
+                            sources.push(v);
+                            const tag = document.createElement('div');
+                            tag.className = 'tag';
+                            tag.innerHTML = `<span>${v}</span><button class='remove' aria-label='Remove'>×</button>`;
+                            sourcesTags.appendChild(tag);
+                        }
+                    });
+                }
+
+                const exc = p.get('exclude_domains');
+                if (exc) excludeDomains = exc.split(',').map(s => s.trim()).filter(Boolean);
+
+                renderDefaultSuggestions();
+
+                // Auto-execute search if query param present
+                if (q) handleSend(q);
+            })();
+
+            // Health check
+            fetch('/api/health').then(r => r.json()).then(d => { if (!d || d.ok !== true) console.warn('Health check failed'); if (d && d.hasKey === false) console.warn('Server missing Tavily key'); }).catch(() => { });
+        })();
+    </script>
+</body>
+
+</html>
