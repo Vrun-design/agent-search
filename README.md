@@ -7,6 +7,7 @@ DeeepStar Search is a beautiful, minimal web application that leverages the [Tav
 ![DeeepStar Search Banner](https://img.shields.io/badge/Built%20with-Node.js-339933?style=for-the-badge&logo=node.js&logoColor=white)
 ![Express](https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express&logoColor=white)
 ![Vanilla JS](https://img.shields.io/badge/Vanilla%20JS-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
+<img width="1440" height="696" alt="Banner" src="https://github.com/user-attachments/assets/fac2368a-6579-4305-8a61-7634b3200720" />
 
 ---
 
